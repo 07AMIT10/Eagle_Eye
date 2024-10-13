@@ -1,7 +1,16 @@
 import streamlit as st
 import os
 import torch
-from transformers import AutoTokenizer, AutoProcessor, AutoModelForCausalLM
+
+try:
+    from transformers import AutoTokenizer, AutoProcessor, AutoModelForCausalLM
+    import einops
+    import transformers_stream_generator
+except ImportError:
+    st.error("Some required packages are missing. Please run the following command to install them:")
+    st.code("pip install einops transformers_stream_generator", language="bash")
+    st.stop()
+
 from PIL import Image
 import time
 from datetime import datetime, timedelta
