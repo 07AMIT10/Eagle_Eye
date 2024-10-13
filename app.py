@@ -1,17 +1,20 @@
 import streamlit as st
-from transformers import AutoTokenizer, AutoProcessor
+import os
 import torch
+from transformers import AutoTokenizer, AutoProcessor, AutoModelForCausalLM
 from PIL import Image
 import time
 from datetime import datetime, timedelta
-import io
 
 # Use a smaller model for better performance
 model_name = "Qwen/Qwen-VL-Chat"
 
 @st.cache_resource
 def load_model():
-    model = torch.load("quantized_model.pth")
+    if os.path.exists("quantized_model.pth"):
+        model = torch.load("quantized_model.pth")
+    else:
+        model = AutoModelForCausalLM.from_pretrained(model_name)
     processor = AutoProcessor.from_pretrained(model_name)
     return model, processor
 
@@ -22,10 +25,7 @@ def quantize_model():
     )
     torch.save(quantized_model, "quantized_model.pth")
 
-# Quantize model if not already done
-if not os.path.exists("quantized_model.pth"):
-    quantize_model()
-
+# Load model (it will be quantized if not already done)
 model, processor = load_model()
 
 def extract_product_info(image):
