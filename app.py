@@ -1,31 +1,59 @@
 import streamlit as st
 import os
+import sys
+
+def check_dependencies():
+    required_packages = [
+        "torch",
+        "torchvision",
+        "transformers",
+        "pillow",
+        "einops",
+        "transformers_stream_generator",
+        "numpy",
+        "tqdm"
+    ]
+    missing_packages = []
+
+    for package in required_packages:
+        try:
+            __import__(package)
+        except ImportError:
+            missing_packages.append(package)
+
+    if missing_packages:
+        st.error(f"The following required packages are missing: {', '.join(missing_packages)}")
+        st.error("Please make sure all required packages are installed. You may need to update your requirements.txt file.")
+        st.stop()
+
+check_dependencies()
+
 import torch
-
-try:
-    from transformers import AutoTokenizer, AutoProcessor, AutoModelForCausalLM
-    import einops
-    import transformers_stream_generator
-except ImportError:
-    st.error("Some required packages are missing. Please run the following command to install them:")
-    st.code("pip install einops transformers_stream_generator", language="bash")
-    st.stop()
-
+import torchvision
+from transformers import AutoTokenizer, AutoProcessor, AutoModelForCausalLM
+import einops
+import transformers_stream_generator
 from PIL import Image
 import time
 from datetime import datetime, timedelta
+import numpy as np
+from tqdm import tqdm
 
 # Use a smaller model for better performance
 model_name = "Qwen/Qwen-VL-Chat"
 
 @st.cache_resource
 def load_model():
-    if os.path.exists("quantized_model.pth"):
-        model = torch.load("quantized_model.pth")
-    else:
-        model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
-    processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-    return model, processor
+    try:
+        if os.path.exists("quantized_model.pth"):
+            model = torch.load("quantized_model.pth")
+        else:
+            model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+        return model, processor
+    except Exception as e:
+        st.error(f"Error loading the model: {str(e)}")
+        st.stop()
 
 def quantize_model():
     model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
@@ -35,13 +63,8 @@ def quantize_model():
     torch.save(quantized_model, "quantized_model.pth")
 
 # Load model (it will be quantized if not already done)
-try:
-    model, processor = load_model()
-except Exception as e:
-    st.error(f"Error loading the model: {str(e)}")
-    st.stop()
+model, processor = load_model()
 
-# Rest of your code remains the same
 def extract_product_info(image):
     try:
         messages = [
@@ -81,7 +104,13 @@ def extract_product_info(image):
         st.error(f"Error in extracting product info: {str(e)}")
         return None
 
-# The rest of your code (parse_product_info, analyze_product, and Streamlit UI) remains the same
+def parse_product_info(raw_output):
+    # Your existing parse_product_info function here
+    pass
+
+def analyze_product(image):
+    # Your existing analyze_product function here
+    pass
 
 st.title("Product Information Extractor")
 st.write("Upload an image of a product to extract information such as brand name, quantity, manufacturing date, expiry date, and price.")
