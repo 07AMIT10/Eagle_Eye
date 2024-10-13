@@ -2,3 +2,5 @@ streamlit
 torch
 transformers
 pillow
+einops
+transformers_stream_generator
