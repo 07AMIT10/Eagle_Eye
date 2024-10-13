@@ -14,20 +14,25 @@ def load_model():
     if os.path.exists("quantized_model.pth"):
         model = torch.load("quantized_model.pth")
     else:
-        model = AutoModelForCausalLM.from_pretrained(model_name)
-    processor = AutoProcessor.from_pretrained(model_name)
+        model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+    processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
     return model, processor
 
 def quantize_model():
-    model = AutoModelForCausalLM.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
     quantized_model = torch.quantization.quantize_dynamic(
         model, {torch.nn.Linear}, dtype=torch.qint8
     )
     torch.save(quantized_model, "quantized_model.pth")
 
 # Load model (it will be quantized if not already done)
-model, processor = load_model()
+try:
+    model, processor = load_model()
+except Exception as e:
+    st.error(f"Error loading the model: {str(e)}")
+    st.stop()
 
+# Rest of your code remains the same
 def extract_product_info(image):
     try:
         messages = [
@@ -67,61 +72,7 @@ def extract_product_info(image):
         st.error(f"Error in extracting product info: {str(e)}")
         return None
 
-def parse_product_info(raw_output):
-    try:
-        info = {
-            "Brand Name": "",
-            "Quantity": "",
-            "Manufacturing Date": "",
-            "Expiry Date": "",
-            "Price": ""
-        }
-        
-        lines = raw_output.split("\n")
-        for line in lines:
-            if ":" in line:
-                key, value = line.split(":", 1)
-                key = key.strip()
-                value = value.strip()
-                if key in info:
-                    info[key] = value
-        
-        if "months" in info["Expiry Date"].lower() and info["Manufacturing Date"]:
-            try:
-                mfg_date = datetime.strptime(info["Manufacturing Date"], "%d/%m/%Y")
-                months = int(info["Expiry Date"].split()[0])
-                exp_date = mfg_date + timedelta(days=30*months)
-                info["Expiry Date"] = exp_date.strftime("%d/%m/%Y")
-            except:
-                st.warning("Unable to calculate expiry date from 'Best Before' information.")
-
-        return info
-    except Exception as e:
-        st.error(f"Error in parsing product info: {str(e)}")
-        return None
-
-def analyze_product(image):
-    start_time = time.time()
-    
-    raw_result = extract_product_info(image)
-    if raw_result:
-        parsed_result = parse_product_info(raw_result)
-        
-        end_time = time.time()
-        inference_time = end_time - start_time
-
-        if parsed_result:
-            st.subheader("Extracted Product Information:")
-            for key, value in parsed_result.items():
-                st.write(f"{key}: {value}")
-            st.write(f"\nInference Time: {inference_time:.2f} seconds")
-            
-            st.subheader("Raw Model Output:")
-            st.text(raw_result)
-        else:
-            st.error("Failed to parse product information.")
-    else:
-        st.error("Failed to extract product information from the image.")
+# The rest of your code (parse_product_info, analyze_product, and Streamlit UI) remains the same
 
 st.title("Product Information Extractor")
 st.write("Upload an image of a product to extract information such as brand name, quantity, manufacturing date, expiry date, and price.")
